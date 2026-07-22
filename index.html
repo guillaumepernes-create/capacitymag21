@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capacity MAG21 — Absences</title>
+<style>
+  :root{
+    --bg: #14181c;
+    --panel: #1c2126;
+    --panel-2: #232930;
+    --line: #2c333b;
+    --text: #e8ebee;
+    --text-dim: #8a939d;
+    --accent: #4f9dde;
+
+    --c-absent: #6b7280;
+    --c-at: #22c55e;
+    --c-cp: #ef4444;
+    --c-css: #dc2626;
+    --c-maladie: #16a34a;
+    --c-maladiepro: #16a34a;
+    --c-recup: #f97316;
+    --c-none: transparent;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size:14px;
+  }
+  header{
+    padding:16px 20px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    background:var(--panel);
+  }
+  header h1{
+    font-size:16px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  header .sub{
+    color:var(--text-dim);
+    font-size:12px;
+    margin-top:2px;
+  }
+  .toolbar{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  button, .btn{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--line);
+    padding:8px 14px;
+    border-radius:6px;
+    font-size:13px;
+    cursor:pointer;
+    font-weight:500;
+  }
+  button:hover{ border-color:var(--accent); }
+  button.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0b1520;
+    font-weight:600;
+  }
+  button.primary:hover{ filter:brightness(1.08); }
+  button.danger{ color:#f87171; }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  #week-label{
+    font-weight:600;
+    min-width:150px;
+    text-align:center;
+  }
+
+  main{ padding:20px; max-width:1400px; margin:0 auto; }
+
+  .add-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .add-row input{
+    flex:1;
+    max-width:320px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:6px;
+    font-size:13px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  th, td{
+    border-bottom:1px solid var(--line);
+    padding:0;
+  }
+  th{
+    background:var(--panel-2);
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    padding:10px 8px;
+    text-align:center;
+  }
+  th.name-col{ text-align:left; padding-left:14px; width:220px; }
+
+  td.name-cell{
+    padding:0 14px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  tr:hover td.name-cell{ color:var(--accent); }
+
+  .day-cell{
+    text-align:center;
+    padding:4px;
+    position:relative;
+  }
+  .status-select{
+    width:100%;
+    height:34px;
+    border:none;
+    border-radius:5px;
+    color:#0b1520;
+    font-size:11px;
+    font-weight:700;
+    text-align:center;
+    cursor:pointer;
+    text-align-last:center;
+    appearance:none;
+    -webkit-appearance:none;
+    background-color:var(--panel-2);
+    color:var(--text-dim);
+    padding:0 4px;
+  }
+  .status-select.st-absent{ background-color:var(--c-absent); color:#fff; }
+  .status-select.st-at{ background-color:var(--c-at); color:#062b0f; }
+  .status-select.st-cp{ background-color:var(--c-cp); color:#fff; }
+  .status-select.st-css{ background-color:var(--c-css); color:#fff; }
+  .status-select.st-maladie{ background-color:var(--c-maladie); color:#062b0f; }
+  .status-select.st-maladiepro{ background-color:var(--c-maladiepro); color:#062b0f; }
+  .status-select.st-recup{ background-color:var(--c-recup); color:#2b1503; }
+
+  .del-cell{ text-align:center; width:36px; }
+  .del-btn{
+    background:none; border:none; color:var(--text-dim);
+    font-size:16px; padding:4px 8px; cursor:pointer;
+  }
+  .del-btn:hover{ color:#f87171; }
+
+  .legend{
+    margin-top:16px;
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .swatch{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+
+  .empty-state{
+    text-align:center;
+    padding:40px;
+    color:var(--text-dim);
+  }
+
+  #import-modal{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.6);
+    align-items:center; justify-content:center;
+    z-index:50;
+  }
+  #import-modal.open{ display:flex; }
+  .modal-box{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:24px;
+    width:480px;
+    max-width:92vw;
+  }
+  .modal-box h2{ margin:0 0 4px; font-size:15px; }
+  .modal-box p{ color:var(--text-dim); font-size:12.5px; margin:0 0 16px; line-height:1.5; }
+  .drop-zone{
+    border:2px dashed var(--line);
+    border-radius:8px;
+    padding:28px;
+    text-align:center;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:13px;
+  }
+  .drop-zone.drag{ border-color:var(--accent); color:var(--accent); }
+  .modal-actions{
+    display:flex; justify-content:flex-end; gap:8px; margin-top:18px;
+  }
+  #import-status{
+    margin-top:12px;
+    font-size:12.5px;
+    color:var(--text-dim);
+    min-height:16px;
+  }
+  #file-input{ display:none; }
+
+  ::selection{ background:var(--accent); color:#0b1520; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Capacity MAG21 — Absences &amp; Dispo</h1>
+    <div class="sub" id="week-sub">Semaine en cours — données enregistrées localement dans ce navigateur</div>
+  </div>
+  <div class="toolbar">
+    <button id="prev-week">&larr;</button>
+    <div id="week-label">Semaine —</div>
+    <button id="next-week">&rarr;</button>
+    <button class="primary" id="open-import">Importer une capture ATPS</button>
+  </div>
+</header>
+
+<main>
+  <div class="add-row">
+    <input type="text" id="new-name" placeholder="Ajouter un opérateur (nom prénom)…">
+    <button id="add-btn">Ajouter</button>
+  </div>
+
+  <table id="grid-table">
+    <thead>
+      <tr>
+        <th class="name-col">Opérateur</th>
+        <th>Lun</th><th>Mar</th><th>Mer</th><th>Jeu</th><th>Ven</th><th>Sam</th><th>Dim</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="grid-body">
+    </tbody>
+  </table>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--c-absent)"></span>Absent</span>
+    <span><span class="swatch" style="background:var(--c-at)"></span>FR AT</span>
+    <span><span class="swatch" style="background:var(--c-cp)"></span>FR CP journée</span>
+    <span><span class="swatch" style="background:var(--c-css)"></span>FR CSS</span>
+    <span><span class="swatch" style="background:var(--c-maladie)"></span>FR MALADIE</span>
+    <span><span class="swatch" style="background:var(--c-maladiepro)"></span>FR MALADIE PRO</span>
+    <span><span class="swatch" style="background:var(--c-recup)"></span>FR RÉCUPÉRATION</span>
+  </div>
+</main>
+
+<div id="import-modal">
+  <div class="modal-box">
+    <h2>Importer une capture ATPS</h2>
+    <p>Dépose ou choisis une image de la grille d'absences ATPS. Les statuts seront lus automatiquement et ajoutés à la semaine affichée — tu pourras vérifier avant de valider.</p>
+    <div class="drop-zone" id="drop-zone">
+      Glisse une image ici<br>ou clique pour choisir un fichier
+    </div>
+    <input type="file" id="file-input" accept="image/*">
+    <div id="import-status"></div>
+    <div class="modal-actions">
+      <button id="close-import">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ["lun","mar","mer","jeu","ven","sam","dim"];
+const STATUSES = [
+  {value:"", label:"—", cls:""},
+  {value:"absent", label:"Absent", cls:"st-absent"},
+  {value:"at", label:"FR AT", cls:"st-at"},
+  {value:"cp", label:"FR CP journée", cls:"st-cp"},
+  {value:"css", label:"FR CSS", cls:"st-css"},
+  {value:"maladie", label:"FR MALADIE", cls:"st-maladie"},
+  {value:"maladiepro", label:"FR MALADIE PRO", cls:"st-maladiepro"},
+  {value:"recup", label:"FR RÉCUPÉRATION", cls:"st-recup"},
+];
+
+const STORE_KEY = "capacity_mag21_simple_v1";
+
+function isoWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return { year: d.getUTCFullYear(), week: weekNo };
+}
+
+function mondayOfWeek(year, week){
+  const jan4 = new Date(Date.UTC(year,0,4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const monday1 = new Date(jan4);
+  monday1.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+  const target = new Date(monday1);
+  target.setUTCDate(monday1.getUTCDate() + (week-1)*7);
+  return target;
+}
+
+let state = loadState();
+let current = isoWeek(new Date());
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { operators: [], weeks: {} };
+}
+function saveState(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+function weekKey(y,w){ return y+"-W"+String(w).padStart(2,"0"); }
+
+function ensureWeek(y,w){
+  const k = weekKey(y,w);
+  if(!state.weeks[k]) state.weeks[k] = {};
+  return state.weeks[k];
+}
+
+function render(){
+  const {year, week} = current;
+  const monday = mondayOfWeek(year, week);
+  const sunday = new Date(monday); sunday.setUTCDate(monday.getUTCDate()+6);
+  const fmt = d => d.toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
+  document.getElementById("week-label").textContent = "Semaine " + week + " — " + year;
+  document.getElementById("week-sub").textContent =
+    "Du " + fmt(monday) + " au " + fmt(sunday) + " — données enregistrées localement dans ce navigateur";
+
+  const body = document.getElementById("grid-body");
+  body.innerHTML = "";
+
+  if(state.operators.length === 0){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 9;
+    td.className = "empty-state";
+    td.textContent = "Aucun opérateur. Ajoute un nom ci-dessus, ou importe une capture ATPS.";
+    tr.appendChild(td);
+    body.appendChild(tr);
+    return;
+  }
+
+  const wdata = ensureWeek(year, week);
+
+  state.operators.forEach(name => {
+    const tr = document.createElement("tr");
+
+    const nameTd = document.createElement("td");
+    nameTd.className = "name-cell";
+    nameTd.textContent = name;
+    tr.appendChild(nameTd);
+
+    DAYS.forEach(day => {
+      const td = document.createElement("td");
+      td.className = "day-cell";
+      const sel = document.createElement("select");
+      sel.className = "status-select";
+      STATUSES.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.value;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+      });
+      const currentVal = (wdata[name] && wdata[name][day]) || "";
+      sel.value = currentVal;
+      applyStatusClass(sel, currentVal);
+      sel.addEventListener("change", () => {
+        if(!wdata[name]) wdata[name] = {};
+        wdata[name][day] = sel.value;
+        applyStatusClass(sel, sel.value);
+        saveState();
+      });
+      td.appendChild(sel);
+      tr.appendChild(td);
+    });
+
+    const delTd = document.createElement("td");
+    delTd.className = "del-cell";
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-btn";
+    delBtn.textContent = "✕";
+    delBtn.title = "Retirer " + name;
+    delBtn.addEventListener("click", () => {
+      if(confirm("Retirer " + name + " de la liste ?")){
+        state.operators = state.operators.filter(n => n !== name);
+        saveState();
+        render();
+      }
+    });
+    delTd.appendChild(delBtn);
+    tr.appendChild(delTd);
+
+    body.appendChild(tr);
+  });
+}
+
+function applyStatusClass(sel, value){
+  STATUSES.forEach(s => { if(s.cls) sel.classList.remove(s.cls); });
+  const match = STATUSES.find(s => s.value === value);
+  if(match && match.cls) sel.classList.add(match.cls);
+}
+
+document.getElementById("add-btn").addEventListener("click", () => {
+  const input = document.getElementById("new-name");
+  const name = input.value.trim();
+  if(!name) return;
+  if(!state.operators.includes(name)){
+    state.operators.push(name);
+    state.operators.sort((a,b) => a.localeCompare(b, "fr"));
+    saveState();
+  }
+  input.value = "";
+  render();
+});
+document.getElementById("new-name").addEventListener("keydown", e => {
+  if(e.key === "Enter") document.getElementById("add-btn").click();
+});
+
+document.getElementById("prev-week").addEventListener("click", () => {
+  const monday = mondayOfWeek(current.year, current.week);
+  monday.setUTCDate(monday.getUTCDate() - 7);
+  current = isoWeek(monday);
+  render();
+});
+document.getElementById("next-week").addEventListener("click", () => {
+  const monday = mondayOfWeek(current.year, current.week);
+  monday.setUTCDate(monday.getUTCDate() + 7);
+  current = isoWeek(monday);
+  render();
+});
+
+// --- Import modal ---
+const modal = document.getElementById("import-modal");
+document.getElementById("open-import").addEventListener("click", () => modal.classList.add("open"));
+document.getElementById("close-import").addEventListener("click", () => {
+  modal.classList.remove("open");
+  document.getElementById("import-status").textContent = "";
+});
+
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag");
+  if(e.dataTransfer.files[0]) handleImportFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", () => {
+  if(fileInput.files[0]) handleImportFile(fileInput.files[0]);
+});
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+const STATUS_LABELS = STATUSES.filter(s => s.value).map(s => `"${s.value}" = ${s.label}`).join(", ");
+
+async function handleImportFile(file){
+  const statusEl = document.getElementById("import-status");
+  statusEl.textContent = "Lecture de l'image en cours…";
+  try{
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || "image/png";
+
+    const prompt = `Voici une capture d'écran d'un tableau d'absences RH (ATPS). Chaque ligne est un nom d'opérateur. Les colonnes après le nom représentent des jours consécutifs, colorées selon le statut d'absence. Les couleurs possibles et leur code sont : ${STATUS_LABELS}. Une cellule sans couleur (blanche/vide) signifie pas d'absence ce jour-là — ignore-la (ne la mets pas dans le résultat).
+
+Réponds UNIQUEMENT avec du JSON, sans texte autour, sans balises markdown. Format exact :
+{"operators": [{"name": "Nom Prénom", "days": ["css","css","css",...]}]}
+
+Le tableau "days" doit contenir un statut par colonne colorée trouvée pour cette personne, dans l'ordre gauche à droite, en utilisant uniquement les codes de statut donnés ci-dessus. Ignore les lignes sans aucune couleur (opérateurs sans absence).`;
+
+    const response = await fetch("/.netlify/functions/analyze-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64, mediaType, prompt })
+    });
+
+    const data = await response.json();
+    if(data.error){ throw new Error(data.error); }
+    const textBlock = (data.content || []).find(b => b.type === "text");
+    if(!textBlock){ throw new Error("Pas de réponse texte (réponse API: " + JSON.stringify(data).slice(0,200) + ")"); }
+
+    let clean = textBlock.text.trim().replace(/^```json/,"").replace(/^```/,"").replace(/```$/,"").trim();
+    const parsed = JSON.parse(clean);
+
+    if(!parsed.operators || !Array.isArray(parsed.operators)){
+      throw new Error("Format inattendu");
+    }
+
+    const {year, week} = current;
+    const wdata = ensureWeek(year, week);
+    let addedNames = 0, addedCells = 0;
+
+    parsed.operators.forEach(op => {
+      const name = (op.name || "").trim();
+      if(!name || !Array.isArray(op.days)) return;
+      if(!state.operators.includes(name)){
+        state.operators.push(name);
+        addedNames++;
+      }
+      if(!wdata[name]) wdata[name] = {};
+      op.days.forEach((statusVal, idx) => {
+        if(idx >= DAYS.length) return;
+        const valid = STATUSES.find(s => s.value === statusVal);
+        if(valid && valid.value){
+          wdata[name][DAYS[idx]] = valid.value;
+          addedCells++;
+        }
+      });
+    });
+
+    state.operators.sort((a,b) => a.localeCompare(b, "fr"));
+    saveState();
+    render();
+
+    statusEl.textContent = `Importé : ${addedCells} statut(s) sur ${parsed.operators.length} opérateur(s)` +
+      (addedNames ? ` (${addedNames} nouveau(x) opérateur(s) ajouté(s))` : "") +
+      `. Vérifie la grille et corrige si besoin.`;
+
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "Erreur pendant la lecture de l'image : " + err.message + ". Réessaie ou vérifie manuellement.";
+  }
+}
+
+render();
+</script>
+</body>
+</html>
