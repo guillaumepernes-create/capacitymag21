@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAG21 — Planning</title>
+<style>
+:root[data-theme="light"] {
+  --bg:#f1f3f6; --s:#ffffff; --s2:#f5f6f8; --b:#dde0e6; --b2:#c4c8d0;
+  --tx:#1a1d23; --tx2:#5a6070; --tx3:#9ca3af;
+  --acc:#d97706; --acc2:#b45309; --acf:rgba(217,119,6,.1);
+  --grn:#16a34a; --org:#ea580c; --red:#dc2626; --rdf:rgba(220,38,38,.08);
+}
+:root {
+  --bg:#111318; --s:#1c1f26; --s2:#22252d; --b:#2e3139; --b2:#3d4149;
+  --tx:#eceef2; --tx2:#9ca3af; --tx3:#4b5260;
+  --acc:#f59e0b; --acc2:#d97706; --acf:rgba(245,158,11,.12);
+  --grn:#34d399; --org:#fb923c; --red:#f87171; --rdf:rgba(248,113,113,.1);
+  --r:8px; --r2:12px; --sh:0 2px 8px rgba(0,0,0,.35);
+  --t:.12s;
+
+  /* Statuts d'absence — mêmes teintes que ATPS */
+  --st-absent:#6b7280; --st-at:#22c55e; --st-cp:#ef4444; --st-css:#dc2626;
+  --st-maladie:#16a34a; --st-maladiepro:#0d9488; --st-recup:#f97316;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+button{font:inherit;cursor:pointer;border:none;background:none}
+input,select{font:inherit;background:var(--s2);color:var(--tx);border:1px solid var(--b);border-radius:var(--r);padding:6px 10px;outline:none}
+input:focus,select:focus{border-color:var(--acc)}
+
+/* HEADER */
+.hdr{background:var(--bg);border-bottom:1px solid var(--b);height:52px;display:flex;align-items:center;gap:10px;padding:0 14px;position:sticky;top:0;z-index:200}
+.logo{background:var(--acc);color:#000;font-weight:800;font-size:11px;padding:4px 8px;border-radius:6px}
+.hdr-title{font-size:14px;font-weight:700;flex:1}
+.hbtns{display:flex;gap:6px;align-items:center}
+.btn{padding:5px 11px;border-radius:var(--r);font-size:12px;font-weight:600;border:1px solid var(--b);color:var(--tx2);background:var(--s);transition:all var(--t)}
+.btn:hover{border-color:var(--b2);color:var(--tx)}
+.btn.primary{background:var(--acc);color:#000;border-color:var(--acc);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--tx3);padding:4px 9px;border-radius:var(--r);border:1px solid var(--b)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--b2)}
+.dot.ok{background:var(--grn);box-shadow:0 0 0 2px rgba(52,211,153,.2)}
+.dot.err{background:var(--red)}
+.dot.sync{background:var(--acc);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* TABS */
+.tabs{background:var(--bg);border-bottom:1px solid var(--b);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto}
+.tabs::-webkit-scrollbar{height:0}
+.tab{padding:8px 13px;font-size:12px;font-weight:600;color:var(--tx2);border-radius:var(--r) var(--r) 0 0;border:1px solid transparent;border-bottom:none;cursor:pointer;position:relative;top:1px;white-space:nowrap;user-select:none;transition:all var(--t)}
+.tab:hover{color:var(--tx);background:var(--s2)}
+.tab.act{background:var(--s);border-color:var(--b);color:var(--acc);font-weight:700}
+.tab-x{font-size:10px;color:var(--tx3);margin-left:5px;padding:1px 3px;border-radius:3px}
+.tab-x:hover{background:var(--rdf);color:var(--red)}
+.tab-add{padding:8px 11px;font-size:12px;color:var(--tx3);cursor:pointer}
+.tab-add:hover{color:var(--acc)}
+
+/* STATS */
+.stats{background:var(--s2);border-bottom:1px solid var(--b);padding:6px 14px;display:flex;gap:5px;flex-wrap:wrap}
+.pill{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid var(--b);color:var(--tx2);background:var(--s)}
+.pill.hi{border-color:var(--acc);color:var(--acc);background:var(--acf)}
+.pill.stpill{cursor:default}
+
+/* MAIN : grille + pool dans le même flux */
+.main{display:grid;grid-template-columns:1fr 230px;height:calc(100vh - 105px);overflow:hidden}
+.postes-zone{overflow-y:auto;padding:12px}
+.postes-zone::-webkit-scrollbar{width:4px}
+.postes-zone::-webkit-scrollbar-thumb{background:var(--b);border-radius:99px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px;align-items:start}
+
+/* CARTE POSTE */
+.card{background:var(--s);border:1px solid var(--b);border-radius:var(--r2);display:flex;flex-direction:column;transition:border-color var(--t)}
+.card.over{border-color:var(--acc);box-shadow:0 0 0 2px var(--acf)}
+.card.blocked{border-color:var(--red)}
+.card-head{display:flex;align-items:center;gap:6px;padding:9px 10px;border-bottom:1px solid var(--b)}
+.card-name{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-cnt{font-size:10px;font-weight:700;color:var(--tx3);background:var(--s2);padding:1px 6px;border-radius:99px;flex-shrink:0}
+.card-del{font-size:11px;color:var(--tx3);padding:2px 4px;border-radius:4px}
+.card-del:hover{background:var(--rdf);color:var(--red)}
+.card-sub{font-size:10px;font-weight:700;font-family:ui-monospace,monospace;padding:4px 10px;display:flex;gap:8px;color:var(--tx3);border-bottom:1px solid var(--b)}
+.card-sub .g{color:var(--grn)}.card-sub .o{color:var(--org)}
+.card-body{padding:6px;display:flex;flex-direction:column;gap:3px;min-height:38px}
+.card-empty{text-align:center;font-size:11px;color:var(--tx3);font-style:italic;padding:8px 0}
+.cap{font-size:10px;font-weight:700;font-family:ui-monospace,monospace;padding:3px 10px;color:var(--tx3);border-bottom:1px solid var(--b)}
+.cap.full{color:var(--red)}
+
+/* CHIP */
+.chip{display:flex;align-items:center;gap:5px;padding:5px 7px;background:var(--s2);border:1px solid var(--b);border-radius:var(--r);cursor:grab;font-size:12px;color:var(--tx);transition:all var(--t);user-select:none}
+.chip:active{cursor:grabbing}
+.chip.dragging{opacity:.25}
+.chip.sel{border-color:var(--acc);background:var(--acf)}
+.chip:hover{border-color:var(--b2)}
+.badge{width:18px;height:18px;border-radius:50%;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.badge.c{background:var(--grn);color:#000}
+.badge.i{background:var(--org);color:#000}
+.badge.u{background:var(--b2);color:var(--tx3)}
+.chip-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* STATUT BADGE (absence) sur le chip */
+.stbadge{
+  font-size:8.5px;font-weight:800;letter-spacing:.02em;
+  padding:2px 6px;border-radius:99px;flex-shrink:0;
+  color:#08110a;cursor:pointer;white-space:nowrap;
+}
+.stbadge.st-absent{background:var(--st-absent);color:#fff}
+.stbadge.st-at{background:var(--st-at)}
+.stbadge.st-cp{background:var(--st-cp);color:#fff}
+.stbadge.st-css{background:var(--st-css);color:#fff}
+.stbadge.st-maladie{background:var(--st-maladie)}
+.stbadge.st-maladiepro{background:var(--st-maladiepro)}
+.stbadge.st-recup{background:var(--st-recup)}
+
+/* Menu statut (popover) */
+.stmenu{
+  position:fixed;z-index:600;background:var(--s);border:1px solid var(--b);
+  border-radius:var(--r);box-shadow:var(--sh);padding:4px;display:none;
+  min-width:170px;
+}
+.stmenu.open{display:block}
+.stmenu-item{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;
+  font-size:12px;color:var(--tx);cursor:pointer;
+}
+.stmenu-item:hover{background:var(--s2)}
+.stmenu-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.stmenu-dot.none{background:var(--b2)}
+.stmenu-dot.st-absent{background:var(--st-absent)}
+.stmenu-dot.st-at{background:var(--st-at)}
+.stmenu-dot.st-cp{background:var(--st-cp)}
+.stmenu-dot.st-css{background:var(--st-css)}
+.stmenu-dot.st-maladie{background:var(--st-maladie)}
+.stmenu-dot.st-maladiepro{background:var(--st-maladiepro)}
+.stmenu-dot.st-recup{background:var(--st-recup)}
+
+/* POOL */
+.pool{border-left:1px solid var(--b);background:var(--s);display:flex;flex-direction:column;overflow:hidden}
+.pool-head{padding:10px 12px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--tx2);flex-shrink:0}
+.pool-cnt{margin-left:auto;font-size:10px;color:var(--tx3);font-weight:700}
+.pool-sub{font-size:10px;font-weight:700;font-family:ui-monospace,monospace;padding:4px 12px;color:var(--tx3);border-bottom:1px solid var(--b);display:flex;gap:8px;flex-shrink:0}
+.pool-list{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px}
+.pool-list::-webkit-scrollbar{width:3px}
+.pool-list::-webkit-scrollbar-thumb{background:var(--b);border-radius:99px}
+.pool-list.over{background:var(--acf)}
+.pool-empty{text-align:center;font-size:11px;color:var(--tx3);font-style:italic;padding:20px 8px}
+.pool-add{padding:7px;border-top:1px solid var(--b);display:flex;gap:4px;flex-shrink:0}
+.pool-add input{flex:1;font-size:11px;padding:5px 8px}
+.pool-add select{font-size:11px;padding:5px 4px}
+.pool-add .btn-plus{background:var(--acc);color:#000;font-weight:800;border-radius:var(--r);padding:5px 10px;font-size:12px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(6px);background:var(--tx);color:var(--bg);padding:8px 18px;border-radius:99px;font-size:13px;font-weight:600;z-index:999;opacity:0;pointer-events:none;transition:all .2s}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--s);border:1px solid var(--b);border-radius:var(--r2);width:100%;max-width:400px;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.modal.wide{max-width:480px}
+.mhead{padding:14px 18px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.mhead h3{font-size:14px;font-weight:700}
+.mclose{font-size:17px;color:var(--tx2);padding:2px 6px;border-radius:4px}
+.mclose:hover{background:var(--s2)}
+.mbody{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.mbody p{font-size:12.5px;color:var(--tx2);line-height:1.5}
+.mrow{display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:12px}
+.mrow input{width:80px;text-align:right}
+.mfoot{padding:10px 18px;border-top:1px solid var(--b);display:flex;justify-content:flex-end;gap:8px}
+.btn-acc{background:var(--acc);color:#000;font-weight:700;padding:6px 14px;border-radius:var(--r);font-size:12px}
+.btn-cancel{color:var(--tx2);padding:6px 12px;border-radius:var(--r);font-size:12px;border:1px solid var(--b)}
+.btn-cancel:hover{color:var(--tx)}
+
+.drop-zone{
+  border:2px dashed var(--b);border-radius:var(--r);padding:26px;text-align:center;
+  color:var(--tx3);cursor:pointer;font-size:13px;transition:all var(--t);
+}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--acc);color:var(--acc)}
+#import-status{font-size:12px;color:var(--tx2);min-height:16px;line-height:1.5}
+#file-input{display:none}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <span class="logo">MAG21</span>
+  <span class="hdr-title">Planning</span>
+  <div class="hbtns">
+    <div class="live"><div class="dot" id="dot"></div><span id="livelbl">…</span></div>
+    <button class="btn" id="btnTheme">☀ Clair</button>
+    <button class="btn" id="btnSettings">⚙ Réglages</button>
+    <button class="btn" id="btnExport">⬇ Export</button>
+    <button class="btn" id="btnImport">⬆ Import</button>
+    <button class="btn primary" id="btnAtps">📷 Importer ATPS</button>
+    <input type="file" id="fileIn" accept=".json" style="display:none">
+  </div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+<div class="stats" id="stats"></div>
+
+<div class="main">
+  <div class="postes-zone">
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="pool" id="pool">
+    <div class="pool-head">Disponibles<span class="pool-cnt" id="poolCnt">0</span></div>
+    <div class="pool-sub" id="poolSub"></div>
+    <div class="pool-list" id="poolList"></div>
+    <div class="pool-add">
+      <input id="addName" placeholder="Nom…" maxlength="60">
+      <select id="addType"><option value="CDI">CDI</option><option value="INTERIM">Int</option></select>
+      <button class="btn-plus" id="addBtn">+</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal réglages -->
+<div class="overlay" id="mSettings">
+  <div class="modal">
+    <div class="mhead"><h3>Réglages</h3><button class="mclose" data-close="mSettings">✕</button></div>
+    <div class="mbody">
+      <div class="mrow"><label>Cadence MAG (bacs/h)</label><input type="number" id="sRateMag"></div>
+      <div class="mrow"><label>Cadence Tables (bacs/h)</label><input type="number" id="sRateTbls"></div>
+      <div class="mrow"><label>Max Tables+Retours</label><input type="number" id="sMaxTbls"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn-cancel" data-close="mSettings">Annuler</button>
+      <button class="btn-acc" id="saveSettings">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal import ATPS -->
+<div class="overlay" id="mAtps">
+  <div class="modal wide">
+    <div class="mhead"><h3>Importer une capture ATPS</h3><button class="mclose" data-close="mAtps">✕</button></div>
+    <div class="mbody">
+      <p>Dépose une capture d'écran de la grille ATPS (absences). Tout le monde présent sur l'image sera lu : les statuts d'absence seront appliqués, et les personnes sans couleur seront ajoutées à Disponibles si elles n'existent pas déjà. Tu pourras vérifier avant de valider.</p>
+      <div class="drop-zone" id="drop-zone">Glisse une image ici<br>ou clique pour choisir un fichier</div>
+      <input type="file" id="file-input" accept="image/*">
+      <div id="import-status"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn-cancel" data-close="mAtps">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menu statut -->
+<div class="stmenu" id="stMenu"></div>
+
+<script>
+/* ── CONFIG ── */
+const FB_URL = 'https://capacity-planning-9628d-default-rtdb.firebaseio.com';
+const FB_KEY = 'AIzaSyDjKSgkKI2axKoCfIl4A2vo8ZLuVflQbdw';
+const ROOM   = 'mag21v5';
+const SK = 'mag21plan4', TK = 'mag21th4';
+
+const DFLT_S = {rateMag:56, rateTables:33, maxTables:26};
+
+const STATUSES = [
+  {value:"", label:"Présent", cls:""},
+  {value:"absent", label:"Absent", cls:"st-absent"},
+  {value:"at", label:"FR AT", cls:"st-at"},
+  {value:"cp", label:"FR CP journée", cls:"st-cp"},
+  {value:"css", label:"FR CSS", cls:"st-css"},
+  {value:"maladie", label:"FR MALADIE", cls:"st-maladie"},
+  {value:"maladiepro", label:"FR MALADIE PRO", cls:"st-maladiepro"},
+  {value:"recup", label:"FR RÉCUPÉRATION", cls:"st-recup"},
+];
+function statusInfo(v){ return STATUSES.find(s=>s.value===(v||"")) || STATUSES[0]; }
+
+/* ── STATE ── */
+const BAKED = {"types":{"Adam Chabani":"INTERIM","Adrien Funeleau":"INTERIM","Alexandre Theret":"INTERIM","Alia Damba":"INTERIM","Amélie Brunet Simon":"CDI","Asmar Hamada":"CDI","Aurélien Jacquet":"CDI","Bryan Jolly":"CDI","Bérénice Morisset":"CDI","Carole Demarconnay":"INTERIM","Christophe Kugler":"CDI","Clément Renault":"INTERIM","Cyril Crugeon":"INTERIM","Cédric Delorme":"CDI","Donovan Boutet":"CDI","Eic Guilloteau":"CDI","El-Yadada Abaine":"CDI","Elodie Fargeau":"CDI","Eric Guilloteau":"CDI","Evan Golbol":"INTERIM","Garry Bordeau":"CDI","Guillaume Pernes":"CDI","Hugo Sauzet":"INTERIM","Jean Vincent":"CDI","Jean-Marie Etogo":"CDI","Jordane Thomas":"CDI","Justin Bruneau":"INTERIM","Karine Eprinchard":"CDI","Kellyan Bertrand":"CDI","Laura Arsac":"INTERIM","Laëtitia Marot":"INTERIM","Lolo-Piké Ouottou":"CDI","Lucas Genauzeau":"INTERIM","Léa Arnaudin":"CDI","Manu Delbaere":"INTERIM","Maria-Astrida Logona":"INTERIM","Mathias Barnabe":"INTERIM","Mathis Benetrault":"CDI","Megane Jadeau":"CDI","Mourdassi Houmadi":"CDI","Mélanie Gervais":"INTERIM","Mélanie Guillon":"CDI","Nathalie Hérault":"INTERIM","Nicolas Guillon":"CDI","Nicolas Masse":"CDI","Océane Grellier":"INTERIM","Océane Tolofua":"CDI","Patrick Sampaio Da Silva":"INTERIM","Renilda De Matos Araujo":"CDI","Sabrina Thebaud":"CDI","Sandra Berra":"CDI","Sandra Loguinoff":"INTERIM","Sonia Gaudin":"INTERIM","Stéphane Dargaud":"CDI","Sydney Deschamps":"INTERIM","Théo Bertrand":"CDI","Tolga Kara":"INTERIM","Tony Collin":"INTERIM","Virginie Mondon":"INTERIM","Wilfrid Prêt":"CDI","Youssouf Berrah":"CDI","Youssouf Moustapha":"INTERIM","Esteban Lepetit":"INTERIM","Julien Gaultier":"INTERIM","Leny Morisseau":"INTERIM","Lily Berra":"INTERIM","Talihnuhtu Kara":"INTERIM","Blanche Pouyadou":"INTERIM","Cassis Cholet":"INTERIM"},"weeks":[{"id":"S27 2","label":"S27","postes":[{"id":"p17828106641270.45716880613144795","name":"MAG 21/31","ops":["Esteban Lepetit","Laëtitia Marot","Laura Arsac","Cyril Crugeon","Talihnuhtu Kara","Clément Renault","Evan Golbol","Lily Berra","Mathias Barnabe","Sandra Loguinoff","Manu Delbaere","Tolga Kara"]},{"id":"p17828106641270.1338422169468565","name":"TABLES","ops":["Megane Jadeau","Hugo Sauzet","Stéphane Dargaud","Bryan Jolly","Carole Demarconnay","Océane Grellier","Océane Tolofua","Patrick Sampaio Da Silva","Christophe Kugler","Nathalie Hérault","Alexandre Theret","Alia Damba","El-Yadada Abaine","Sonia Gaudin","Léa Arnaudin","Renilda De Matos Araujo","Youssouf Moustapha","Virginie Mondon","Karine Eprinchard","Justin Bruneau","Mélanie Gervais","Jean-Marie Etogo","Adam Chabani"]},{"id":"p17828106641270.16598796839996233","name":"BACS VIDE","ops":["Maria-Astrida Logona"]},{"id":"p17828106641270.1955356342758101","name":"RETOURS","ops":["Jean Vincent","Sandra Berra","Sabrina Thebaud"]},{"id":"p17828106641270.8738331570500202","name":"STATION DE CONTRÔLE","ops":["Jordane Thomas"]},{"id":"p17828106641270.3280001028625127","name":"TI","ops":["Garry Bordeau","Lolo-Piké Ouottou","Mourdassi Houmadi","Mélanie Guillon"]},{"id":"p17828106641270.542421029518158","name":"CONSOLIDATION","ops":["Mathis Benetrault"]},{"id":"p17828106641270.8685144227832834","name":"ABSENT","ops":["Théo Bertrand","Asmar Hamada","Bérénice Morisset","Cédric Delorme","Eric Guilloteau"]},{"id":"p17828106641270.7215895580041145","name":"REPACK","ops":["Julien Gaultier","Nicolas Masse","Leny Morisseau"]},{"id":"p17828106641270.6252180725199504","name":"RACK","ops":["Lucas Genauzeau","Wilfrid Prêt","Youssouf Berrah","Nicolas Guillon","Kellyan Bertrand"]}],"pool":["Elodie Fargeau","Aurélien Jacquet","Amélie Brunet Simon","Guillaume Pernes","Donovan Boutet"]},{"id":"S28","label":"S28","postes":[{"id":"p17829058974920.891930704955649","name":"MAG 21/31","ops":[]},{"id":"p17829058974920.8162978622297057","name":"BACS VIDE","ops":[]},{"id":"p17829058974920.11222811778632547","name":"TABLES","ops":[]},{"id":"p17829058974920.718673994868716","name":"RETOURS","ops":[]},{"id":"p17829058974920.9836781766859568","name":"STATION DE CONTRÔLE","ops":[]},{"id":"p17829058974920.4799085636557797","name":"TI","ops":[]},{"id":"p17829058974920.20641259379185484","name":"CONSOLIDATION","ops":[]},{"id":"p17829058974920.3246555221823053","name":"REPACK","ops":[]},{"id":"p17829058974920.9574121642876471","name":"RACK","ops":[]},{"id":"p17829058974920.8511287755837699","name":"ABSENT","ops":[]}],"pool":["Clément Renault","Laura Arsac","Youssouf Moustapha","Tolga Kara","Stéphane Dargaud","Sandra Loguinoff","Talihnuhtu Kara","Esteban Lepetit","Mélanie Gervais","Océane Grellier","Alia Damba","Adam Chabani","Nathalie Hérault","Evan Golbol","Alexandre Theret","Patrick Sampaio Da Silva","Jean-Marie Etogo","Hugo Sauzet","Justin Bruneau","Lucas Genauzeau","Laëtitia Marot","Carole Demarconnay","Mourdassi Houmadi","Karine Eprinchard","Sandra Berra","Océane Tolofua","Manu Delbaere","Jordane Thomas","Maria-Astrida Logona","Bryan Jolly","Megane Jadeau","Cyril Crugeon","Virginie Mondon","Jean Vincent","El-Yadada Abaine","Lily Berra","Lolo-Piké Ouottou","Sonia Gaudin","Renilda De Matos Araujo","Mathis Benetrault","Garry Bordeau","Wilfrid Prêt","Christophe Kugler","Sabrina Thebaud","Nicolas Masse","Léa Arnaudin","Mélanie Guillon","Nicolas Guillon","Youssouf Berrah","Kellyan Bertrand","Cédric Delorme","Eric Guilloteau","Théo Bertrand","Asmar Hamada","Bérénice Morisset","Mathias Barnabe","Amélie Brunet Simon","Julien Gaultier","Leny Morisseau","Elodie Fargeau","Aurélien Jacquet","Guillaume Pernes","Donovan Boutet"]},{"id":"S28 Picking","label":"S28 Picking","postes":[{"id":"p17828818125000.18389268138278836","name":"PICKING","ops":["Alexandre Theret","Alia Damba","El-Yadada Abaine","Esteban Lepetit","Evan Golbol","Jordane Thomas","Karine Eprinchard","Justin Bruneau","Jean Vincent","Jean-Marie Etogo","Cyril Crugeon","Clément Renault","Bryan Jolly","Lucas Genauzeau","Lolo-Piké Ouottou","Mourdassi Houmadi","Nathalie Hérault","Mélanie Gervais","Sonia Gaudin","Stéphane Dargaud","Tolga Kara","Virginie Mondon","Patrick Sampaio Da Silva","Youssouf Moustapha","Talihnuhtu Kara","Océane Grellier","Sandra Loguinoff","Nicolas Masse","Megane Jadeau","Manu Delbaere","Maria-Astrida Logona","Lily Berra","Léa Arnaudin","Laura Arsac","Laëtitia Marot","Hugo Sauzet","Carole Demarconnay","Cassis Cholet"]},{"id":"p17828818125000.3689293883297057","name":"PACKING","ops":["Renilda De Matos Araujo","Sabrina Thebaud"]},{"id":"p17828818125000.30209703651693265","name":"SORTING","ops":["Mélanie Guillon","Sandra Berra","Océane Tolofua"]},{"id":"p17828818125000.17371496205390224","name":"CONSOLIDATION","ops":["Mathis Benetrault"]},{"id":"p17828818379630.39944773953162127","name":"ABSENT","ops":["Adam Chabani","Asmar Hamada","Cédric Delorme","Eric Guilloteau","Bérénice Morisset","Christophe Kugler","Guillaume Pernes"]},{"id":"p17828820696420.9408912383579854","name":"MAINTENANCE","ops":["Wilfrid Prêt","Garry Bordeau"]}],"pool":["Nicolas Guillon","Youssouf Berrah","Kellyan Bertrand","Théo Bertrand","Julien Gaultier","Leny Morisseau","Aurélien Jacquet","Donovan Boutet","Amélie Brunet Simon","Elodie Fargeau"]}],"s":{"rateMag":56,"rateTables":33,"maxTables":26},"cur":"S28 Picking"};
+let state = load();
+let drag  = null;   // {name, from:'pool'|'poste', fid}
+let sel   = null;   // chip sélectionné
+let pushT = null, lastSync = 0, liveOn = false;
+
+function load() {
+  try {
+    const r = localStorage.getItem(SK);
+    if (r) {
+      const p = JSON.parse(r);
+      if (p && p.weeks && p.weeks.some(w => w.postes && w.postes.length > 0)) return migrate(p);
+    }
+  } catch(e) {}
+  return migrate(JSON.parse(JSON.stringify(BAKED)));
+}
+
+function migrate(p) {
+  if (!p.weeks && (p.postes || p.pool)) {
+    const postes = (p.postes||[]).filter(x=>!x.isEncadrement).map(x=>({
+      id: x.id, name: x.name,
+      ops: x.operators||x.ops||[]
+    }));
+    const pool = [
+      ...(p.pool||[]),
+      ...(p.postes||[]).filter(x=>x.isEncadrement).flatMap(x=>x.operators||x.ops||[])
+    ];
+    p = {weeks:[{id:p.currentWeek||'W1', label:p.currentWeek||'S27', postes, pool}],
+         cur:p.currentWeek||'W1', types:p.types||{}, s:p.settings||DFLT_S};
+  }
+  if (p.weeks) {
+    p.weeks = p.weeks.map(w => {
+      const enc = (w.postes||[]).filter(x=>x.isEncadrement);
+      const postes = (w.postes||[]).filter(x=>!x.isEncadrement).map(x=>({
+        id:x.id, name:x.name, ops:x.operators||x.ops||[]
+      }));
+      const extra = enc.flatMap(x=>x.operators||x.ops||[]);
+      const pool = [...(w.pool||[]), ...extra.filter(n=>!(w.pool||[]).includes(n))];
+      return {id:w.id, label:w.label||w.id, postes, pool};
+    });
+  }
+  if (!p.s) p.s = p.settings || DFLT_S;
+  if (!p.types) p.types = {};
+  if (!p.status) p.status = {}; // { weekId: { name: statusValue } }
+  return p;
+}
+
+function save() { try { localStorage.setItem(SK, JSON.stringify(state)); } catch(e) {} }
+function cw()   { return state.weeks.find(w=>w.id===state.cur) || state.weeks[0]; }
+function esc(s) { return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function norm(s) { return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function isTbl(p) { const n=norm(p.name); return n.includes('table')||n.includes('retour'); }
+function isMag(p) { return norm(p.name).includes('mag'); }
+function isAbsentPoste(p) { return norm(p.name).includes('absent'); }
+function tblCount() { return cw().postes.filter(isTbl).reduce((s,p)=>s+p.ops.length,0); }
+function maxTbl()   { return (state.s||DFLT_S).maxTables; }
+
+function types(ops) {
+  let c=0,i=0,u=0;
+  ops.forEach(n=>{ const t=state.types[n]; if(t==='CDI')c++; else if(t==='INTERIM')i++; else u++; });
+  return {c,i,u};
+}
+
+/* ── STATUT PAR OPÉRATEUR (par semaine) ── */
+function getStatus(name) {
+  const s = state.status[state.cur];
+  return s ? (s[name] || "") : "";
+}
+function setStatus(name, value) {
+  if (!state.status[state.cur]) state.status[state.cur] = {};
+  if (value) state.status[state.cur][name] = value;
+  else delete state.status[state.cur][name];
+}
+
+/* ── TOAST ── */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ── MOVE ── */
+function move(from, to) {
+  const n = from.name;
+  if (to.type === 'poste') {
+    const dp = cw().postes.find(p=>p.id===to.id);
+    if (dp && isTbl(dp)) {
+      const fromPoste = cw().postes.find(p=>p.id===from.fid);
+      if (!fromPoste || !isTbl(fromPoste)) {
+        if (tblCount() >= maxTbl()) { toast('⛔ Limite Tables+Retours atteinte'); return; }
+      }
+    }
+  }
+  if (from.from === 'pool') cw().pool = cw().pool.filter(x=>x!==n);
+  else { const p=cw().postes.find(p=>p.id===from.fid); if(p) p.ops=p.ops.filter(x=>x!==n); }
+  if (to.type === 'pool') { if(!cw().pool.includes(n)) cw().pool.push(n); }
+  else { const p=cw().postes.find(p=>p.id===to.id); if(p&&!p.ops.includes(n)) p.ops.push(n); }
+  render();
+}
+
+/* ── STATUS MENU (popover) ── */
+let stMenuTarget = null;
+function openStatusMenu(anchorEl, name) {
+  stMenuTarget = name;
+  const menu = document.getElementById('stMenu');
+  menu.innerHTML = STATUSES.map(s => `
+    <div class="stmenu-item" data-val="${esc(s.value)}">
+      <span class="stmenu-dot ${s.cls||'none'}"></span>
+      <span>${esc(s.label)}</span>
+    </div>`).join('');
+  const rect = anchorEl.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.min(rect.left, window.innerWidth - 190) + 'px';
+  menu.classList.add('open');
+}
+function closeStatusMenu() {
+  document.getElementById('stMenu').classList.remove('open');
+  stMenuTarget = null;
+}
+document.getElementById('stMenu').addEventListener('click', e => {
+  const item = e.target.closest('.stmenu-item');
+  if (!item || !stMenuTarget) return;
+  setStatus(stMenuTarget, item.dataset.val);
+  closeStatusMenu();
+  render();
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.stmenu') && !e.target.closest('.stbadge')) closeStatusMenu();
+});
+
+/* ── CHIP ── */
+function makeChip(name, from, fid) {
+  const t = state.types[name];
+  const cls = t==='CDI'?'c':t==='INTERIM'?'i':'u';
+  const ltr = t==='CDI'?'C':t==='INTERIM'?'I':'?';
+  const st = statusInfo(getStatus(name));
+
+  const div = document.createElement('div');
+  div.className = 'chip';
+  div.draggable = true;
+  div.innerHTML = `
+    <div class="badge ${cls}">${ltr}</div>
+    <span class="chip-name">${esc(name)}</span>
+    ${st.value ? `<span class="stbadge ${st.cls}" title="Changer le statut">${esc(st.label)}</span>` : `<span class="stbadge" style="background:transparent;color:var(--tx3);border:1px dashed var(--b)" title="Définir un statut">·</span>`}
+  `;
+
+  div.querySelector('.badge').addEventListener('click', e => {
+    e.stopPropagation();
+    const cur = state.types[name];
+    if (!cur) state.types[name] = 'CDI';
+    else if (cur === 'CDI') state.types[name] = 'INTERIM';
+    else delete state.types[name];
+    render();
+  });
+
+  div.querySelector('.stbadge').addEventListener('click', e => {
+    e.stopPropagation();
+    openStatusMenu(e.currentTarget, name);
+  });
+
+  div.addEventListener('dragstart', e => {
+    drag = {name, from, fid};
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', name);
+    setTimeout(() => div.classList.add('dragging'), 0);
+  });
+  div.addEventListener('dragend', () => {
+    div.classList.remove('dragging');
+    drag = null;
+    document.querySelectorAll('.over,.blocked').forEach(el=>el.classList.remove('over','blocked'));
+    document.getElementById('poolList').classList.remove('over');
+  });
+
+  div.addEventListener('click', e => {
+    if (e.target.classList.contains('badge') || e.target.classList.contains('stbadge')) return;
+    const was = sel && sel.name===name && sel.fid===fid;
+    document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));
+    if (was) { sel=null; return; }
+    sel = {name, from, fid};
+    div.classList.add('sel');
+    toast(`${name} sélectionné — clique sur un poste ou Disponibles`);
+  });
+
+  return div;
+}
+
+/* ── DROP TARGET ── */
+function droppable(el, onDrop, canDrop) {
+  el.addEventListener('dragover', e => {
+    if (!drag) return;
+    const ok = canDrop ? canDrop() : true;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = ok ? 'move' : 'none';
+    if (ok) el.classList.add('over'); else el.classList.add('blocked');
+  });
+  el.addEventListener('dragleave', e => {
+    if (!el.contains(e.relatedTarget)) el.classList.remove('over','blocked');
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    el.classList.remove('over','blocked');
+    if (!drag) return;
+    const d = drag; drag = null;
+    onDrop(d);
+  });
+}
+
+/* ── RENDER ── */
+function render() {
+  renderTabs(); renderGrid(); renderPool(); renderStats();
+  save(); schedulePush();
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabs');
+  bar.innerHTML = '';
+  state.weeks.forEach(w => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (w.id===state.cur?' act':'');
+    btn.innerHTML = `<span>${esc(w.label)}</span>${state.weeks.length>1?`<button class="tab-x" data-id="${w.id}">✕</button>`:''}`;
+    btn.addEventListener('click', e => {
+      if (e.target.closest('.tab-x')) {
+        const id = e.target.closest('.tab-x').dataset.id;
+        if (!confirm('Supprimer cette semaine ?')) return;
+        state.weeks = state.weeks.filter(x=>x.id!==id);
+        if (state.cur===id) state.cur = state.weeks[0].id;
+        render(); return;
+      }
+      state.cur = w.id; render();
+    });
+    btn.addEventListener('dblclick', e => {
+      if (e.target.closest('.tab-x')) return;
+      const label = prompt('Renommer :', w.label);
+      if (label?.trim()) { w.label = label.trim(); render(); }
+    });
+    bar.appendChild(btn);
+  });
+  const add = document.createElement('button');
+  add.className = 'tab-add'; add.textContent = '+ semaine';
+  add.addEventListener('click', () => {
+    const label = prompt('Nom de la semaine :'); if (!label?.trim()) return;
+    const id = 'W'+Date.now();
+    state.weeks.push({id, label:label.trim(), postes:[], pool:[]});
+    state.cur = id; render();
+  });
+  bar.appendChild(add);
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  cw().postes.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card'; card.dataset.id = p.id;
+    const t = types(p.ops);
+    const tc = tblCount(), mx = maxTbl();
+    const capHTML = isTbl(p) ? `<div class="cap${tc>=mx?' full':''}">Tables+Retours : ${tc}/${mx}</div>` : '';
+    card.innerHTML = `
+      <div class="card-head">
+        <span class="card-name">${esc(p.name)}</span>
+        <span class="card-cnt">${p.ops.length}</span>
+        <button class="card-del" data-id="${p.id}">✕</button>
+      </div>
+      <div class="card-sub"><span class="g">C ${t.c}</span><span class="o">I ${t.i}</span></div>
+      ${capHTML}
+      <div class="card-body" data-id="${p.id}"></div>`;
+
+    const body = card.querySelector('.card-body');
+    const sorted = [...p.ops].sort((a,b)=>a.localeCompare(b,'fr'));
+    if (sorted.length === 0) body.innerHTML = '<div class="card-empty">Glisser ici</div>';
+    else sorted.forEach(n => body.appendChild(makeChip(n,'poste',p.id)));
+
+    const canDrop = () => {
+      const dp = cw().postes.find(x=>x.id===p.id);
+      return !(drag && dp && isTbl(dp) && !isTbl(cw().postes.find(x=>x.id===drag.fid)||{name:''}) && drag.from==='poste'? tblCount()>=maxTbl() : isTbl(dp) && drag && drag.from==='pool' && tblCount()>=maxTbl());
+    };
+    droppable(card, d => move(d, {type:'poste', id:p.id}));
+    droppable(body, d => move(d, {type:'poste', id:p.id}));
+
+    card.addEventListener('click', e => {
+      if (e.target.closest('.chip,.card-del')) return;
+      if (!sel) return;
+      move(sel, {type:'poste', id:p.id}); sel=null;
+      document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));
+    });
+
+    card.querySelector('.card-del').addEventListener('click', () => {
+      if (p.ops.length && !confirm(`Supprimer "${p.name}" ? Les ${p.ops.length} opérateurs rejoignent Disponibles.`)) return;
+      cw().pool.push(...p.ops.filter(n=>!cw().pool.includes(n)));
+      cw().postes = cw().postes.filter(x=>x.id!==p.id);
+      render();
+    });
+
+    grid.appendChild(card);
+  });
+
+  const addCard = document.createElement('div');
+  addCard.style.cssText = 'border:2px dashed var(--b);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;min-height:60px;color:var(--tx3);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--t)';
+  addCard.textContent = '+ Poste';
+  addCard.addEventListener('mouseenter',()=>{addCard.style.borderColor='var(--acc)';addCard.style.color='var(--acc)';});
+  addCard.addEventListener('mouseleave',()=>{addCard.style.borderColor='var(--b)';addCard.style.color='var(--tx3)';});
+  addCard.addEventListener('click', () => {
+    const n = prompt('Nom du poste :'); if (!n?.trim()) return;
+    cw().postes.push({id:'p'+Date.now(), name:n.trim().toUpperCase(), ops:[]});
+    render();
+  });
+  grid.appendChild(addCard);
+}
+
+function renderPool() {
+  const list = document.getElementById('poolList');
+  const cnt  = document.getElementById('poolCnt');
+  const sub  = document.getElementById('poolSub');
+  const pool = cw().pool;
+
+  cnt.textContent = pool.length;
+  const t = types(pool);
+  sub.innerHTML = `<span style="color:var(--grn)">C ${t.c}</span><span style="color:var(--org)">I ${t.i}</span>`;
+
+  list.innerHTML = '';
+  if (!pool.length) {
+    list.innerHTML = '<div class="pool-empty">Tout le monde est affecté 👌</div>';
+  } else {
+    [...pool].sort((a,b)=>a.localeCompare(b,'fr')).forEach(n => {
+      const chip = makeChip(n,'pool','');
+      list.appendChild(chip);
+    });
+  }
+
+  list.addEventListener('dragover', e => {
+    if (!drag) return;
+    e.preventDefault(); e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    list.classList.add('over');
+  });
+  list.addEventListener('dragleave', e => {
+    if (!list.contains(e.relatedTarget)) list.classList.remove('over');
+  });
+  list.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    list.classList.remove('over');
+    if (!drag) return;
+    const d = drag; drag = null;
+    move(d, {type:'pool'});
+  });
+
+  document.getElementById('pool').addEventListener('click', e => {
+    if (e.target.closest('.chip,.pool-add')) return;
+    if (!sel) return;
+    move(sel, {type:'pool'}); sel = null;
+    document.querySelectorAll('.chip.sel').forEach(c=>c.classList.remove('sel'));
+  });
+}
+
+function renderStats() {
+  const bar = document.getElementById('stats');
+  const all = [...cw().pool, ...cw().postes.flatMap(p=>p.ops)];
+  const t = types(all);
+  const s = state.s || DFLT_S;
+  const magN = cw().postes.filter(isMag).reduce((s,p)=>s+p.ops.length,0);
+  const tblN = cw().postes.filter(isTbl).reduce((s,p)=>s+p.ops.length,0);
+
+  // Comptage des statuts d'absence pour la semaine en cours
+  const statusMap = state.status[state.cur] || {};
+  const counts = {};
+  all.forEach(n => {
+    const v = statusMap[n];
+    if (v) counts[v] = (counts[v]||0) + 1;
+  });
+
+  const statusPills = STATUSES.filter(s=>s.value && counts[s.value]).map(s => `
+    <div class="pill stpill"><span class="stmenu-dot ${s.cls}" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(s.label)} <b>${counts[s.value]}</b></div>
+  `).join('');
+
+  bar.innerHTML = `
+    <div class="pill">Total <b>${all.length}</b></div>
+    <div class="pill">Affectés <b>${all.length - cw().pool.length}</b></div>
+    <div class="pill">Dispo <b>${cw().pool.length}</b></div>
+    <div class="pill">CDI <b>${t.c}</b></div>
+    <div class="pill">Intérim <b>${t.i}</b></div>
+    ${cw().postes.some(isMag)?`<div class="pill hi">MAG <b>${magN*s.rateMag} bacs/h</b></div>`:''}
+    ${cw().postes.some(isTbl)?`<div class="pill hi">Tables <b>${Math.round(tblN*s.rateTables)} bacs/h</b></div>`:''}
+    ${statusPills}
+  `;
+}
+
+/* ── ADD PERSON ── */
+function initAdd() {
+  const go = () => {
+    const n = document.getElementById('addName').value.trim();
+    if (!n) return;
+    const all = [...cw().pool, ...cw().postes.flatMap(p=>p.ops)];
+    if (all.some(x=>x.toLowerCase()===n.toLowerCase())) { toast(`"${n}" existe déjà`); return; }
+    state.types[n] = document.getElementById('addType').value;
+    cw().pool.push(n);
+    document.getElementById('addName').value = '';
+    render();
+  };
+  document.getElementById('addBtn').addEventListener('click', go);
+  document.getElementById('addName').addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+}
+
+/* ── SETTINGS ── */
+function initSettings() {
+  document.getElementById('btnSettings').addEventListener('click', () => {
+    const s = state.s || DFLT_S;
+    document.getElementById('sRateMag').value = s.rateMag;
+    document.getElementById('sRateTbls').value = s.rateTables;
+    document.getElementById('sMaxTbls').value = s.maxTables;
+    document.getElementById('mSettings').classList.add('open');
+  });
+  document.getElementById('saveSettings').addEventListener('click', () => {
+    state.s = {
+      rateMag:    +document.getElementById('sRateMag').value || 56,
+      rateTables: +document.getElementById('sRateTbls').value || 33,
+      maxTables:  +document.getElementById('sMaxTbls').value || 26
+    };
+    render();
+    document.getElementById('mSettings').classList.remove('open');
+    toast('Réglages enregistrés');
+  });
+}
+
+/* ── EXPORT / IMPORT JSON ── */
+function initExport() {
+  document.getElementById('btnExport').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(state, null, 2));
+    a.download = 'mag21_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+  });
+  document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileIn').click());
+  document.getElementById('fileIn').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        state = migrate(d);
+        if (!state.s) state.s = DFLT_S;
+        render(); pushNow(); toast('Importé ✓');
+      } catch(err) { toast('Erreur : ' + err.message); }
+    };
+    r.readAsText(f); e.target.value = '';
+  });
+}
+
+/* ── IMPORT ATPS (capture d'écran → IA) ── */
+function initAtpsImport() {
+  const modal = document.getElementById('mAtps');
+  document.getElementById('btnAtps').addEventListener('click', () => modal.classList.add('open'));
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) handleAtpsFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleAtpsFile(fileInput.files[0]);
+  });
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+const STATUS_LABELS = STATUSES.filter(s => s.value).map(s => `"${s.value}" = ${s.label}`).join(", ");
+
+async function handleAtpsFile(file){
+  const statusEl = document.getElementById("import-status");
+  statusEl.textContent = "Lecture de l'image en cours…";
+  try{
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || "image/png";
+
+    const prompt = `Voici une capture d'écran d'un tableau d'absences RH (ATPS). Chaque ligne est un nom d'opérateur. Les colonnes après le nom représentent des jours consécutifs, colorées selon le statut d'absence. Les couleurs possibles et leur code sont : ${STATUS_LABELS}. Une cellule sans couleur (blanche/vide) signifie présent ce jour-là.
+
+Liste TOUS les noms visibles sur l'image, y compris les personnes qui n'ont AUCUNE cellule colorée (elles sont présentes toute la semaine — mets un tableau "days" vide pour elles).
+
+Réponds UNIQUEMENT avec du JSON, sans texte autour, sans balises markdown. Format exact :
+{"operators": [{"name": "Nom Prénom", "days": ["css","css",...]}]}
+
+Le tableau "days" doit contenir un statut par colonne colorée trouvée pour cette personne (ignore les colonnes vides/blanches), dans l'ordre gauche à droite, en utilisant uniquement les codes de statut donnés ci-dessus. Le statut retenu pour la personne sera le premier trouvé dans "days" (le plus significatif de sa semaine). Si "days" est vide, la personne est présente.`;
+
+    const response = await fetch("/.netlify/functions/analyze-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64, mediaType, prompt })
+    });
+
+    const data = await response.json();
+    if(data.error){
+      const msg = typeof data.error === "string" ? data.error : JSON.stringify(data.error);
+      throw new Error(msg);
+    }
+    const textBlock = (data.content || []).find(b => b.type === "text");
+    if(!textBlock){ throw new Error("Pas de réponse texte (réponse API: " + JSON.stringify(data).slice(0,200) + ")"); }
+
+    let clean = textBlock.text.trim().replace(/^```json/,"").replace(/^```/,"").replace(/```$/,"").trim();
+    const parsed = JSON.parse(clean);
+    if(!parsed.operators || !Array.isArray(parsed.operators)){
+      throw new Error("Format inattendu");
+    }
+
+    const allExisting = [...cw().pool, ...cw().postes.flatMap(p=>p.ops)];
+    let addedNames = 0, updatedStatus = 0, keptPresent = 0;
+
+    parsed.operators.forEach(op => {
+      const name = (op.name || "").trim();
+      if(!name) return;
+
+      // Ajouter la personne si elle n'existe pas encore nulle part
+      if(!allExisting.some(x => x.toLowerCase() === name.toLowerCase())){
+        cw().pool.push(name);
+        allExisting.push(name);
+        if(!state.types[name]) state.types[name] = "CDI";
+        addedNames++;
+      }
+
+      const days = Array.isArray(op.days) ? op.days : [];
+      const firstValid = days.find(d => STATUSES.some(s => s.value === d && s.value));
+      if(firstValid){
+        setStatus(name, firstValid);
+        updatedStatus++;
+      } else {
+        setStatus(name, ""); // présent
+        keptPresent++;
+      }
+    });
+
+    render();
+
+    statusEl.textContent = `Importé : ${parsed.operators.length} personne(s) lues — ${updatedStatus} statut(s) d'absence appliqué(s), ${keptPresent} marquée(s) présente(s)` +
+      (addedNames ? `, ${addedNames} nouvelle(s) personne(s) ajoutée(s) à Disponibles` : "") +
+      `. Vérifie et corrige si besoin (clique sur le petit badge à côté d'un nom pour changer son statut).`;
+
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "Erreur pendant la lecture de l'image : " + err.message + ". Réessaie ou vérifie manuellement.";
+  }
+}
+
+/* ── MODALS ── */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-close]');
+  if (btn) document.getElementById(btn.dataset.close).classList.remove('open');
+  const ol = e.target.closest('.overlay');
+  if (ol && e.target === ol) ol.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open')); closeStatusMenu(); }
+});
+
+/* ── FIREBASE ── */
+function setLive(type, label) {
+  document.getElementById('dot').className = 'dot' + (type?' '+type:'');
+  document.getElementById('livelbl').textContent = label;
+}
+
+function schedulePush() {
+  if (!liveOn) return;
+  clearTimeout(pushT);
+  pushT = setTimeout(pushNow, 400);
+}
+
+function pushNow() {
+  if (!liveOn || !window._fbRef || !window._fbSet) return;
+  setLive('sync', '⊙ Live');
+  const payload = {updatedAt: Date.now(), data: state};
+  window._fbSet(window._fbRef, payload)
+    .then(() => { lastSync = payload.updatedAt; setLive('ok', '● Live'); })
+    .catch(() => setLive('err', '✖ Erreur'));
+}
+
+function listenFB() {
+  setLive('sync', '⊙ Connexion…');
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
+    s2.onload = () => {
+      try {
+        const app = firebase.initializeApp({
+          apiKey: FB_KEY,
+          databaseURL: FB_URL,
+          projectId: 'capacity-planning-9628d'
+        });
+        const db = firebase.database(app);
+        const ref = db.ref('rooms/' + ROOM);
+        window._fbRef = ref;
+        window._fbSet = (r, v) => r.set(v);
+        ref.on('value', snap => {
+          const remote = snap.val();
+          if (!remote || typeof remote.updatedAt !== 'number') {
+            pushNow(); return;
+          }
+          if (remote.updatedAt > lastSync && remote.data) {
+            const d = migrate(remote.data);
+            if (!d.s) d.s = DFLT_S;
+            const hasData = d.weeks && d.weeks.some(w => w.postes && w.postes.length > 0 || w.pool && w.pool.length > 0);
+            if (hasData) { state = d; lastSync = remote.updatedAt; render(); }
+            else { pushNow(); }
+          }
+          setLive('ok', '● Live');
+        }, () => setLive('err', '✖ Erreur'));
+        liveOn = true;
+      } catch(e) { setLive('err', '✖ Erreur'); }
+    };
+    s2.onerror = () => setLive('err', '✖ Hors ligne');
+    document.head.appendChild(s2);
+  };
+  s1.onerror = () => setLive('err', '✖ Hors ligne');
+  document.head.appendChild(s1);
+}
+
+/* ── THÈME ── */
+function initTheme() {
+  const saved = localStorage.getItem(TK) || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeBtn(saved);
+  document.getElementById('btnTheme').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem(TK, next);
+    updateThemeBtn(next);
+  });
+}
+function updateThemeBtn(theme) {
+  document.getElementById('btnTheme').textContent = theme === 'dark' ? '☀ Clair' : '🌙 Sombre';
+}
+
+/* ── INIT ── */
+initTheme();
+initAdd();
+initSettings();
+initExport();
+initAtpsImport();
+render();
+listenFB();
+</script>
+</body>
+</html>
